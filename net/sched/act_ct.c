@@ -235,7 +235,8 @@ static int tcf_ct_flow_table_add_action_nat(struct net *net,
 static int tcf_ct_flow_table_fill_actions(struct net *net,
 					  const struct flow_offload *flow,
 					  enum flow_offload_tuple_dir tdir,
-					  struct nf_flow_rule *flow_rule)
+					  struct nf_flow_rule *flow_rule,
+					  const struct net_device_path_stack *stack)
 {
 	struct flow_action *action = &flow_rule->rule->action;
 	int num_entries = action->num_entries;

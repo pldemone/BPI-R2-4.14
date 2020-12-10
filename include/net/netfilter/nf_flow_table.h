@@ -45,6 +45,8 @@ struct nf_flow_rule {
 	struct flow_rule	*rule;
 };
 
+struct net_device_path_stack;
+
 struct nf_flowtable_type {
 	struct list_head		list;
 	int				family;
@@ -55,7 +57,8 @@ struct nf_flowtable_type {
 	int				(*action)(struct net *net,
 						  const struct flow_offload *flow,
 						  enum flow_offload_tuple_dir dir,
-						  struct nf_flow_rule *flow_rule);
+						  struct nf_flow_rule *flow_rule,
+						  const struct net_device_path_stack *stack);
 	void				(*free)(struct nf_flowtable *ft);
 	nf_hookfn			*hook;
 	struct module			*owner;
@@ -123,6 +126,7 @@ struct flow_offload_tuple {
 	/* All members above are keys for lookups, see flow_offload_hash(). */
 	struct { }			__hash;
 
+	int				offload_iifidx;
 	u8				dir:4,
 					xmit_type:2,
 					in_vlan_num:2;
@@ -180,6 +184,7 @@ struct nf_flow_route {
 		struct dst_entry		*dst;
 		struct {
 			u32			ifindex;
+			u32			offload_ifindex;
 			u16			vid[NF_FLOW_TABLE_VLAN_MAX];
 			__be16			vproto[NF_FLOW_TABLE_VLAN_MAX];
 			u8			num_vlans;
@@ -296,10 +301,12 @@ int nf_flow_table_offload_setup(struct nf_flowtable *flowtable,
 				enum flow_block_command cmd);
 int nf_flow_rule_route_ipv4(struct net *net, const struct flow_offload *flow,
 			    enum flow_offload_tuple_dir dir,
-			    struct nf_flow_rule *flow_rule);
+			    struct nf_flow_rule *flow_rule,
+			    const struct net_device_path_stack *stack);
 int nf_flow_rule_route_ipv6(struct net *net, const struct flow_offload *flow,
 			    enum flow_offload_tuple_dir dir,
-			    struct nf_flow_rule *flow_rule);
+			    struct nf_flow_rule *flow_rule,
+			    const struct net_device_path_stack *stack);
 
 int nf_flow_table_offload_init(void);
 void nf_flow_table_offload_exit(void);

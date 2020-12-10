@@ -91,6 +91,7 @@ static int flow_offload_fill_route(struct flow_offload *flow,
 	}
 
 	flow_tuple->iifidx = route->tuple[dir].in.ifindex;
+	flow_tuple->offload_iifidx = route->tuple[dir].in.offload_ifindex;
 	for (i = 0; i < route->tuple[dir].in.num_vlans; i++) {
 		flow_tuple->in_vlan[i].id = route->tuple[dir].in.vid[i];
 		flow_tuple->in_vlan[i].proto = route->tuple[dir].in.vproto[i];

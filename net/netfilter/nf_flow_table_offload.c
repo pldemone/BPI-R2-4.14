@@ -78,11 +78,14 @@ static void nf_flow_rule_lwt_match(struct nf_flow_match *match,
 
 static int nf_flow_rule_match(struct nf_flow_match *match,
 			      const struct flow_offload_tuple *tuple,
-			      struct dst_entry *other_dst)
+			      struct dst_entry *other_dst,
+			      const struct net_device_path_stack *stack)
 {
 	struct nf_flow_key *mask = &match->mask;
 	struct nf_flow_key *key = &match->key;
 	struct ip_tunnel_info *tun_info;
+	int ifindex = tuple->iifidx;
+	int i;
 
 	NF_FLOW_DISSECTOR(match, FLOW_DISSECTOR_KEY_META, meta);
 	NF_FLOW_DISSECTOR(match, FLOW_DISSECTOR_KEY_CONTROL, control);
@@ -97,7 +100,20 @@ static int nf_flow_rule_match(struct nf_flow_match *match,
 		nf_flow_rule_lwt_match(match, tun_info);
 	}
 
-	key->meta.ingress_ifindex = tuple->iifidx;
+	if (stack) {
+		for (i = stack->num_paths - 1; i >= 0; i--) {
+			const struct net_device_path *path = &stack->path[i];
+
+			if (tuple->offload_iifidx > 0 &&
+			    tuple->offload_iifidx != path->dev->ifindex)
+				continue;
+
+			ifindex = stack->path[stack->num_paths - 1].dev->ifindex;
+			break;
+		}
+	}
+
+	key->meta.ingress_ifindex = ifindex;
 	mask->meta.ingress_ifindex = 0xffffffff;
 
 	switch (tuple->l3proto) {
@@ -547,15 +563,55 @@ static void flow_offload_decap_tunnel(const struct flow_offload *flow,
 	}
 }
 
-int nf_flow_rule_route_ipv4(struct net *net, const struct flow_offload *flow,
-			    enum flow_offload_tuple_dir dir,
-			    struct nf_flow_rule *flow_rule)
+static int
+nf_flow_rule_route_common(struct net *net, const struct flow_offload *flow,
+			  enum flow_offload_tuple_dir dir,
+			  struct nf_flow_rule *flow_rule,
+			  const struct net_device_path_stack *stack)
 {
+	int num_vlans = 0;
+	int i;
+
 	flow_offload_decap_tunnel(flow, dir, flow_rule);
 	flow_offload_encap_tunnel(flow, dir, flow_rule);
 
 	if (flow_offload_eth_src(net, flow, dir, flow_rule) < 0 ||
 	    flow_offload_eth_dst(net, flow, dir, flow_rule) < 0)
+		return -1;
+
+	for (i = 0; i < stack->num_paths; i++) {
+		const struct net_device_path *path = &stack->path[i];
+
+		switch (path->type) {
+		case DEV_PATH_VLAN:
+			num_vlans++;
+			break;
+		case DEV_PATH_BRIDGE:
+			if (path->bridge.vlan_mode == DEV_PATH_BR_VLAN_TAG)
+				num_vlans++;
+			else if (path->bridge.vlan_mode == DEV_PATH_BR_VLAN_UNTAG)
+				num_vlans--;
+			break;
+		default:
+			break;
+		}
+	}
+
+	for (i = 0; i < num_vlans; i++) {
+		struct flow_action_entry *entry = flow_action_entry_next(flow_rule);
+
+		entry->id = FLOW_ACTION_VLAN_POP;
+	}
+
+	return 0;
+}
+
+int nf_flow_rule_route_ipv4(struct net *net, const struct flow_offload *flow,
+			    enum flow_offload_tuple_dir dir,
+			    struct nf_flow_rule *flow_rule,
+			    const struct net_device_path_stack *stack)
+{
+	if (nf_flow_rule_route_common(net, flow, dir, flow_rule, stack) < 0)
 		return -1;
 
 	if (test_bit(NF_FLOW_SNAT, &flow->flags)) {
@@ -578,13 +634,10 @@ EXPORT_SYMBOL_GPL(nf_flow_rule_route_ipv4);
 
 int nf_flow_rule_route_ipv6(struct net *net, const struct flow_offload *flow,
 			    enum flow_offload_tuple_dir dir,
-			    struct nf_flow_rule *flow_rule)
+			    struct nf_flow_rule *flow_rule,
+			    const struct net_device_path_stack *stack)
 {
-	flow_offload_decap_tunnel(flow, dir, flow_rule);
-	flow_offload_encap_tunnel(flow, dir, flow_rule);
-
-	if (flow_offload_eth_src(net, flow, dir, flow_rule) < 0 ||
-	    flow_offload_eth_dst(net, flow, dir, flow_rule) < 0)
+	if (nf_flow_rule_route_common(net, flow, dir, flow_rule, stack) < 0)
 		return -1;
 
 	if (test_bit(NF_FLOW_SNAT, &flow->flags)) {
@@ -612,8 +665,11 @@ nf_flow_offload_rule_alloc(struct net *net,
 	const struct nf_flowtable *flowtable = offload->flowtable;
 	const struct flow_offload *flow = offload->flow;
 	const struct flow_offload_tuple *tuple;
+	const struct flow_offload_tuple *other_tuple;
+	struct net_device_path_stack stack = {};
 	struct nf_flow_rule *flow_rule;
 	struct dst_entry *other_dst = NULL;
+	struct net_device *dev;
 	int err = -ENOMEM;
 
 	flow_rule = kzalloc(sizeof(*flow_rule), GFP_KERNEL);
@@ -624,24 +680,39 @@ nf_flow_offload_rule_alloc(struct net *net,
 	if (!flow_rule->rule)
 		goto err_flow_rule;
 
+	rcu_read_lock();
+
 	flow_rule->rule->match.dissector = &flow_rule->match.dissector;
 	flow_rule->rule->match.mask = &flow_rule->match.mask;
 	flow_rule->rule->match.key = &flow_rule->match.key;
 
 	tuple = &flow->tuplehash[dir].tuple;
-	if (flow->tuplehash[!dir].tuple.xmit_type != FLOW_OFFLOAD_XMIT_DIRECT)
-		other_dst = flow->tuplehash[!dir].tuple.dst_cache;
-	err = nf_flow_rule_match(&flow_rule->match, tuple, other_dst);
+	other_tuple = &flow->tuplehash[!dir].tuple;
+	if (other_tuple->xmit_type != FLOW_OFFLOAD_XMIT_DIRECT) {
+		other_dst = other_tuple->dst_cache;
+	} else {
+		dev = dev_get_by_index_rcu(net, other_tuple->out.ifidx);
+		if (dev)
+			dev_fill_forward_path(dev, other_tuple->out.h_dest,
+					      &stack);
+	}
+
+	err = nf_flow_rule_match(&flow_rule->match, tuple, other_dst, &stack);
 	if (err < 0)
 		goto err_flow_match;
 
 	flow_rule->rule->action.num_entries = 0;
-	if (flowtable->type->action(net, flow, dir, flow_rule) < 0)
+	if (flowtable->type->action(net, flow, dir, flow_rule, &stack) < 0)
 		goto err_flow_match;
+
+	flow_offload_redirect(net, flow, dir, flow_rule);
+
+	rcu_read_unlock();
 
 	return flow_rule;
 
 err_flow_match:
+	rcu_read_unlock();
 	kfree(flow_rule->rule);
 err_flow_rule:
 	kfree(flow_rule);
