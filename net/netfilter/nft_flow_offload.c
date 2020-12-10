@@ -65,6 +65,10 @@ static int nft_dev_fill_forward_path(const struct nf_flow_route *route,
 
 struct nft_forward_info {
 	const struct net_device *indev;
+	const struct net_device *vlandev;
+	__u16 vid[NF_FLOW_TABLE_VLAN_MAX];
+	__be16 vproto[NF_FLOW_TABLE_VLAN_MAX];
+	u8 num_vlans;
 	u8 h_source[ETH_ALEN];
 	u8 h_dest[ETH_ALEN];
 	enum flow_offload_xmit_type xmit_type;
@@ -86,6 +90,16 @@ static void nft_dev_path_info(const struct net_device_path_stack *stack,
 			memcpy(info->h_source, ha, ETH_ALEN);
 			break;
 		case DEV_PATH_VLAN:
+			if (info->num_vlans >= NF_FLOW_TABLE_VLAN_MAX) {
+				info->indev = NULL;
+				break;
+			}
+			if (!info->vlandev)
+				info->vlandev = path->dev;
+
+			info->vid[info->num_vlans] = path->vlan.id;
+			info->vproto[info->num_vlans] = path->vlan.proto;
+			info->num_vlans++;
 			break;
 		case DEV_PATH_BRIDGE:
 			memcpy(info->h_dest, path->dev->dev_addr, ETH_ALEN);
@@ -124,6 +138,7 @@ static void nft_dev_forward_path(struct nf_flow_route *route,
 	struct net_device_path_stack stack;
 	struct nft_forward_info info = {};
 	unsigned char ha[ETH_ALEN];
+	int i;
 
 	if (nft_dev_fill_forward_path(route, dst, ct, dir, ha, &stack) >= 0)
 		nft_dev_path_info(&stack, &info, ha);
@@ -132,11 +147,19 @@ static void nft_dev_forward_path(struct nf_flow_route *route,
 		return;
 
 	route->tuple[!dir].in.ifindex = info.indev->ifindex;
+	for (i = 0; i < info.num_vlans; i++) {
+		route->tuple[!dir].in.vid[i] = info.vid[i];
+		route->tuple[!dir].in.vproto[i] = info.vproto[i];
+	}
+	route->tuple[!dir].in.num_vlans = info.num_vlans;
 
 	if (info.xmit_type == FLOW_OFFLOAD_XMIT_DIRECT) {
 		memcpy(route->tuple[dir].out.h_dest, info.h_source, ETH_ALEN);
 		memcpy(route->tuple[dir].out.h_source, info.h_dest, ETH_ALEN);
-		route->tuple[dir].out.ifindex = info.indev->ifindex;
+		if (info.vlandev)
+			route->tuple[dir].out.ifindex = info.vlandev->ifindex;
+		else
+			route->tuple[dir].out.ifindex = info.indev->ifindex;
 		route->tuple[dir].xmit_type = info.xmit_type;
 	}
 }

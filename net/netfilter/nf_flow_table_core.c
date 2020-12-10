@@ -79,6 +79,7 @@ static int flow_offload_fill_route(struct flow_offload *flow,
 {
 	struct flow_offload_tuple *flow_tuple = &flow->tuplehash[dir].tuple;
 	struct dst_entry *dst = route->tuple[dir].dst;
+	int i;
 
 	switch (flow_tuple->l3proto) {
 	case NFPROTO_IPV4:
@@ -90,6 +91,11 @@ static int flow_offload_fill_route(struct flow_offload *flow,
 	}
 
 	flow_tuple->iifidx = route->tuple[dir].in.ifindex;
+	for (i = 0; i < route->tuple[dir].in.num_vlans; i++) {
+		flow_tuple->in_vlan[i].id = route->tuple[dir].in.vid[i];
+		flow_tuple->in_vlan[i].proto = route->tuple[dir].in.vproto[i];
+	}
+	flow_tuple->in_vlan_num = route->tuple[dir].in.num_vlans;
 
 	switch (route->tuple[dir].xmit_type) {
 	case FLOW_OFFLOAD_XMIT_DIRECT:
