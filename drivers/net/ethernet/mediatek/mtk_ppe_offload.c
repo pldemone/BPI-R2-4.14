@@ -1,0 +1,479 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ *  Copyright (C) 2020 Felix Fietkau <nbd@nbd.name>
+ */
+
+#include <linux/if_ether.h>
+#include <linux/rhashtable.h>
+#include <linux/if_ether.h>
+#include <linux/ip.h>
+#include <net/flow_offload.h>
+#include <net/pkt_cls.h>
+#include <net/dsa.h>
+#include "mtk_eth_soc.h"
+
+struct mtk_flow_data {
+	struct ethhdr eth;
+
+	union {
+		struct {
+			__be32 src_addr;
+			__be32 dst_addr;
+		} v4;
+	};
+
+	__be16 src_port;
+	__be16 dst_port;
+};
+
+struct mtk_flow_entry {
+	struct rhash_head node;
+	unsigned long cookie;
+	u16 hash;
+};
+
+static const struct rhashtable_params mtk_flow_ht_params = {
+	.head_offset = offsetof(struct mtk_flow_entry, node),
+	.head_offset = offsetof(struct mtk_flow_entry, cookie),
+	.key_len = sizeof(unsigned long),
+	.automatic_shrinking = true,
+};
+
+static u32
+mtk_eth_timestamp(struct mtk_eth *eth)
+{
+	return mtk_r32(eth, 0x0010) & MTK_FOE_IB1_BIND_TIMESTAMP;
+}
+
+static int
+mtk_flow_set_ipv4_addr(struct mtk_foe_entry *foe, struct mtk_flow_data *data,
+		       bool egress)
+{
+	return mtk_foe_entry_set_ipv4_tuple(foe, egress,
+					    data->v4.src_addr, data->src_port,
+					    data->v4.dst_addr, data->dst_port);
+}
+
+static void
+mtk_flow_offload_mangle_eth(const struct flow_action_entry *act, void *eth)
+{
+	void *dest = eth + act->mangle.offset;
+	const void *src = &act->mangle.val;
+
+	if (act->mangle.offset > 8)
+		return;
+
+	if (act->mangle.mask == 0xffff) {
+		src += 2;
+		dest += 2;
+	}
+
+	memcpy(dest, src, act->mangle.mask ? 2 : 4);
+}
+
+
+static int
+mtk_flow_mangle_ports(const struct flow_action_entry *act,
+		      struct mtk_flow_data *data)
+{
+	u32 val = ntohl(act->mangle.val);
+
+	switch (act->mangle.offset) {
+	case 0:
+		if (act->mangle.mask == ~htonl(0xffff))
+			data->dst_port = cpu_to_be16(val);
+		else
+			data->src_port = cpu_to_be16(val >> 16);
+		break;
+	case 2:
+		data->dst_port = cpu_to_be16(val);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
+mtk_flow_mangle_ipv4(const struct flow_action_entry *act,
+		     struct mtk_flow_data *data)
+{
+	__be32 *dest;
+
+	switch (act->mangle.offset) {
+	case offsetof(struct iphdr, saddr):
+		dest = &data->v4.src_addr;
+		break;
+	case offsetof(struct iphdr, daddr):
+		dest = &data->v4.dst_addr;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	memcpy(dest, &act->mangle.val, sizeof(u32));
+
+	return 0;
+}
+
+static int
+mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
+			   struct net_device *dev, u8 *dest_addr)
+{
+	struct net_device_path_stack stack;
+	struct {
+		u16 id;
+		__be16 proto;
+	} vlan[NET_DEVICE_PATH_STACK_MAX];
+	int num_vlan = 0;
+	int pse_port = 0;
+	int i;
+
+	if (dev_fill_forward_path(dev, dest_addr, &stack))
+		return -EOPNOTSUPP;
+
+	for (i = 0; i < stack.num_paths; i++) {
+		const struct net_device_path *path = &stack.path[i];
+
+		switch (path->type) {
+		case DEV_PATH_VLAN:
+			vlan[num_vlan].id = path->vlan.id;
+			vlan[num_vlan].proto = path->vlan.proto;
+			num_vlan++;
+			break;
+		case DEV_PATH_BRIDGE:
+			switch (path->bridge.vlan_mode) {
+			case DEV_PATH_BR_VLAN_KEEP:
+				continue;
+			case DEV_PATH_BR_VLAN_TAG:
+				vlan[num_vlan].id = path->vlan.id;
+				vlan[num_vlan].proto = path->vlan.proto;
+				num_vlan++;
+				break;
+			case DEV_PATH_BR_VLAN_UNTAG:
+				num_vlan--;
+				break;
+			}
+			break;
+		case DEV_PATH_DSA:
+			if (path->dsa.proto != DSA_TAG_PROTO_MTK)
+				return -EOPNOTSUPP;
+
+			mtk_foe_entry_set_dsa(foe, path->dsa.port);
+			break;
+		case DEV_PATH_ETHERNET:
+			if (path->dev == eth->netdev[0])
+				pse_port = 1;
+			else if (path->dev == eth->netdev[1])
+				pse_port = 2;
+			else
+				return -EOPNOTSUPP;
+
+			mtk_foe_entry_set_pse_port(foe, pse_port);
+			break;
+		default:
+			return -EOPNOTSUPP;
+		}
+	}
+
+	if (num_vlan) {
+		if (num_vlan > 1 || vlan[0].proto != ETH_P_8021Q)
+			return -EOPNOTSUPP;
+
+		mtk_foe_entry_set_vlan(foe, vlan[0].id);
+	}
+
+	return 0;
+}
+
+static int
+mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
+{
+	struct flow_rule *rule = flow_cls_offload_flow_rule(f);
+	struct flow_action_entry *act;
+	struct mtk_flow_data data = {};
+	struct mtk_foe_entry foe;
+	struct net_device *odev = NULL;
+	struct mtk_flow_entry *entry;
+	int offload_type = 0;
+	u16 addr_type = 0;
+	u32 timestamp;
+	u8 l4proto = 0;
+	int err = 0;
+	int hash;
+	int i;
+
+	if (flow_rule_match_key(rule, FLOW_DISSECTOR_KEY_META)) {
+		struct flow_match_meta match;
+
+		flow_rule_match_meta(rule, &match);
+		if (!((eth->netdev[0] && eth->netdev[0]->ifindex ==
+					 match.key->ingress_ifindex) ||
+		      (eth->netdev[1] && eth->netdev[1]->ifindex ==
+					 match.key->ingress_ifindex)))
+			return -EOPNOTSUPP;
+	} else {
+		return -EOPNOTSUPP;
+	}
+
+	if (flow_rule_match_key(rule, FLOW_DISSECTOR_KEY_CONTROL)) {
+		struct flow_match_control match;
+
+		flow_rule_match_control(rule, &match);
+		addr_type = match.key->addr_type;
+	} else {
+		return -EOPNOTSUPP;
+	}
+
+	if (flow_rule_match_key(rule, FLOW_DISSECTOR_KEY_BASIC)) {
+		struct flow_match_basic match;
+
+		flow_rule_match_basic(rule, &match);
+		l4proto = match.key->ip_proto;
+	} else {
+		return -EOPNOTSUPP;
+	}
+
+	flow_action_for_each(i, act, &rule->action) {
+		switch (act->id) {
+		case FLOW_ACTION_MANGLE:
+			if (act->mangle.htype == FLOW_ACT_MANGLE_HDR_TYPE_ETH)
+				mtk_flow_offload_mangle_eth(act, &data.eth);
+			break;
+		case FLOW_ACTION_REDIRECT:
+			odev = act->dev;
+			break;
+		case FLOW_ACTION_CSUM:
+		case FLOW_ACTION_VLAN_POP:
+			break;
+		default:
+			return -EOPNOTSUPP;
+		}
+	}
+
+	switch (addr_type) {
+	case FLOW_DISSECTOR_KEY_IPV4_ADDRS:
+		offload_type = MTK_PPE_PKT_TYPE_IPV4_HNAPT;
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	if (!is_valid_ether_addr(data.eth.h_source) ||
+	    !is_valid_ether_addr(data.eth.h_dest))
+		return -EINVAL;
+
+	err = mtk_foe_entry_prepare(&foe, offload_type, l4proto, 0,
+				    data.eth.h_source,
+				    data.eth.h_dest);
+	if (err)
+		return err;
+
+	if (flow_rule_match_key(rule, FLOW_DISSECTOR_KEY_PORTS)) {
+		struct flow_match_ports ports;
+
+		flow_rule_match_ports(rule, &ports);
+		data.src_port = ports.key->src;
+		data.dst_port = ports.key->dst;
+	} else {
+		return -EOPNOTSUPP;
+	}
+
+	if (addr_type == FLOW_DISSECTOR_KEY_IPV4_ADDRS) {
+		struct flow_match_ipv4_addrs addrs;
+
+		flow_rule_match_ipv4_addrs(rule, &addrs);
+
+		data.v4.src_addr = addrs.key->src;
+		data.v4.dst_addr = addrs.key->dst;
+
+		mtk_flow_set_ipv4_addr(&foe, &data, false);
+	}
+
+	flow_action_for_each(i, act, &rule->action) {
+		if (act->id != FLOW_ACTION_MANGLE)
+			continue;
+
+		switch (act->mangle.htype) {
+		case FLOW_ACT_MANGLE_HDR_TYPE_TCP:
+		case FLOW_ACT_MANGLE_HDR_TYPE_UDP:
+			err = mtk_flow_mangle_ports(act, &data);
+			break;
+		case FLOW_ACT_MANGLE_HDR_TYPE_IP4:
+			err = mtk_flow_mangle_ipv4(act, &data);
+			break;
+		case FLOW_ACT_MANGLE_HDR_TYPE_ETH:
+			/* handled earlier */
+			break;
+		default:
+			return -EOPNOTSUPP;
+		}
+
+		if (err)
+			return err;
+	}
+
+	if (addr_type == FLOW_DISSECTOR_KEY_IPV4_ADDRS) {
+		err = mtk_flow_set_ipv4_addr(&foe, &data, true);
+		if (err)
+			return err;
+	}
+
+	err = mtk_flow_set_output_device(eth, &foe, odev, data.eth.h_dest);
+	if (err)
+		return err;
+
+	entry = kzalloc(sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return -ENOMEM;
+
+	entry->cookie = f->cookie;
+	timestamp = mtk_eth_timestamp(eth);
+	hash = mtk_foe_entry_commit(&eth->ppe, &foe, timestamp);
+	if (hash < 0) {
+		err = hash;
+		goto free;
+	}
+
+	entry->hash = hash;
+	err = rhashtable_insert_fast(&eth->flow_table, &entry->node,
+				     mtk_flow_ht_params);
+	if (err < 0)
+		goto clear_flow;
+
+	return 0;
+clear_flow:
+	mtk_foe_entry_clear(&eth->ppe, hash);
+free:
+	kfree(entry);
+	return err;
+}
+
+static int
+mtk_flow_offload_destroy(struct mtk_eth *eth, struct flow_cls_offload *f)
+{
+	struct mtk_flow_entry *entry;
+
+	entry = rhashtable_lookup(&eth->flow_table, &f->cookie,
+				  mtk_flow_ht_params);
+	if (!entry)
+		return -ENOENT;
+
+	mtk_foe_entry_clear(&eth->ppe, entry->hash);
+	rhashtable_remove_fast(&eth->flow_table, &entry->node,
+			       mtk_flow_ht_params);
+	kfree(entry);
+
+	return 0;
+}
+
+static int
+mtk_flow_offload_stats(struct mtk_eth *eth, struct flow_cls_offload *f)
+{
+	struct mtk_flow_entry *entry;
+	int timestamp;
+	u32 idle;
+
+	entry = rhashtable_lookup(&eth->flow_table, &f->cookie,
+				  mtk_flow_ht_params);
+	if (!entry)
+		return -ENOENT;
+
+	timestamp = mtk_foe_entry_timestamp(&eth->ppe, entry->hash);
+	if (timestamp < 0)
+		return -ETIMEDOUT;
+
+	idle = mtk_eth_timestamp(eth) - timestamp;
+	f->stats.lastused = jiffies - idle * HZ;
+
+	return 0;
+}
+
+static int
+mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_priv)
+{
+	struct flow_cls_offload *cls = type_data;
+	struct net_device *dev = cb_priv;
+	struct mtk_mac *mac = netdev_priv(dev);
+	struct mtk_eth *eth = mac->hw;
+
+	if (!tc_can_offload(dev))
+		return -EOPNOTSUPP;
+
+	if (type != TC_SETUP_CLSFLOWER)
+		return -EOPNOTSUPP;
+
+	switch (cls->command) {
+	case FLOW_CLS_REPLACE:
+		return mtk_flow_offload_replace(eth, cls);
+	case FLOW_CLS_DESTROY:
+		return mtk_flow_offload_destroy(eth, cls);
+	case FLOW_CLS_STATS:
+		return mtk_flow_offload_stats(eth, cls);
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	return 0;
+}
+
+static int
+mtk_eth_setup_tc_block(struct net_device *dev, struct flow_block_offload *f)
+{
+	struct mtk_mac *mac = netdev_priv(dev);
+	struct mtk_eth *eth = mac->hw;
+	static LIST_HEAD(block_cb_list);
+	struct flow_block_cb *block_cb;
+	flow_setup_cb_t *cb;
+
+	if (!eth->ppe.foe_table)
+		return -EOPNOTSUPP;
+
+	if (f->binder_type != FLOW_BLOCK_BINDER_TYPE_CLSACT_INGRESS)
+		return -EOPNOTSUPP;
+
+	cb = mtk_eth_setup_tc_block_cb;
+	f->driver_block_list = &block_cb_list;
+
+	switch (f->command) {
+	case FLOW_BLOCK_BIND:
+		if (flow_block_cb_is_busy(cb, dev, &block_cb_list))
+			return -EBUSY;
+
+		block_cb = flow_block_cb_alloc(cb, dev, dev, NULL);
+		if (IS_ERR(block_cb))
+			return PTR_ERR(block_cb);
+
+		flow_block_cb_add(block_cb, f);
+		list_add_tail(&block_cb->driver_list, &block_cb_list);
+		return 0;
+	case FLOW_BLOCK_UNBIND:
+		block_cb = flow_block_cb_lookup(f->block, cb, dev);
+		if (!block_cb)
+			return -ENOENT;
+
+		flow_block_cb_remove(block_cb, f);
+		list_del(&block_cb->driver_list);
+		return 0;
+	default:
+		return -EOPNOTSUPP;
+	}
+}
+
+int mtk_eth_setup_tc(struct net_device *dev, enum tc_setup_type type,
+		     void *type_data)
+{
+	if (type == TC_SETUP_FT)
+		return mtk_eth_setup_tc_block(dev, type_data);
+
+	return -EOPNOTSUPP;
+}
+
+int mtk_eth_offload_init(struct mtk_eth *eth)
+{
+	if (!eth->ppe.foe_table)
+		return 0;
+
+	return rhashtable_init(&eth->flow_table, &mtk_flow_ht_params);
+}
