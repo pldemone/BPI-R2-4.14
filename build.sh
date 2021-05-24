@@ -278,18 +278,19 @@ function upload {
 
 	echo "Name: $imagename"
 
-	if [[ "$board" == "bpi-r64" ]];then
-		dtbname="${kernver}${board//bpi/}${gitbranch}${switch}.dtb"
-		read -e -i $dtbname -p "dtb-filename: " input
-		dtbname="${input:-$dtbname}"
-
-		echo "DTB Name: $dtbname"
-	fi
+#	if [[ "$board" == "bpi-r64" ]];then
+#		dtbname="${kernver}${board//bpi/}${gitbranch}${switch}.dtb"
+#		read -e -i $dtbname -p "dtb-filename: " input
+#		dtbname="${input:-$dtbname}"
+#
+#		echo "DTB Name: $dtbname"
+#	fi
 
 	echo "uploading to ${uploadserver}:${uploaddir}..."
 	if [[ "$board" == "bpi-r64" ]];then
-		scp uImage_nodt ${uploaduser}@${uploadserver}:${uploaddir}/${imagename}
-		scp bpi-r64.dtb ${uploaduser}@${uploadserver}:${uploaddir}/${dtbname}
+#		scp uImage_nodt ${uploaduser}@${uploadserver}:${uploaddir}/${imagename}
+#		scp bpi-r64.dtb ${uploaduser}@${uploadserver}:${uploaddir}/${dtbname}
+		scp $board.itb ${uploaduser}@${uploadserver}:${uploaddir}/${imagename}.itb
 	else
 		scp uImage ${uploaduser}@${uploadserver}:${uploaddir}/${imagename}
 	fi
