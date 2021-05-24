@@ -363,7 +363,7 @@ mt7530_fdb_write(struct mt7530_priv *priv, u16 vid,
 {
 	u32 reg[3] = { 0 };
 	int i;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	reg[1] |= vid & CVID_MASK;
 	reg[2] |= (aging & AGE_TIMER_MASK) << AGE_TIMER;
 	reg[2] |= (port_mask & PORT_MAP_MASK) << PORT_MAP;
@@ -378,7 +378,7 @@ mt7530_fdb_write(struct mt7530_priv *priv, u16 vid,
 	reg[0] |= mac[2] << MAC_BYTE_2;
 	reg[0] |= mac[1] << MAC_BYTE_1;
 	reg[0] |= mac[0] << MAC_BYTE_0;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	/* Write array into the ARL table */
 	for (i = 0; i < 3; i++)
 		mt7530_write(priv, MT7530_ATA1 + (i * 4), reg[i]);
@@ -1351,11 +1351,12 @@ mt7530_port_fdb_del(struct dsa_switch *ds, int port,
 	int ret;
 	u8 port_mask = BIT(port);
 
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	mutex_lock(&priv->reg_mutex);
 	mt7530_fdb_write(priv, vid, port_mask, addr, -1, STATIC_EMP);
 	ret = mt7530_fdb_cmd(priv, MT7530_FDB_WRITE, NULL);
 	mutex_unlock(&priv->reg_mutex);
-
+printk(KERN_ALERT "DEBUG: Passed %s %d ret:%d\n",__FUNCTION__,__LINE__,ret);
 	return ret;
 }
 

@@ -166,10 +166,10 @@ static int dsa_switch_fdb_del(struct dsa_switch *ds,
 			      struct dsa_notifier_fdb_info *info)
 {
 	int port = dsa_towards_port(ds, info->sw_index, info->port);
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (!ds->ops->port_fdb_del)
 		return -EOPNOTSUPP;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	return ds->ops->port_fdb_del(ds, port, info->addr, info->vid);
 }
 
@@ -477,7 +477,9 @@ static int dsa_switch_event(struct notifier_block *nb,
 		err = dsa_switch_fdb_add(ds, info);
 		break;
 	case DSA_NOTIFIER_FDB_DEL:
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		err = dsa_switch_fdb_del(ds, info);
+printk(KERN_ALERT "DEBUG: Passed %s %d err:%d\n",__FUNCTION__,__LINE__,err);
 		break;
 	case DSA_NOTIFIER_HSR_JOIN:
 		err = dsa_switch_hsr_join(ds, info);
