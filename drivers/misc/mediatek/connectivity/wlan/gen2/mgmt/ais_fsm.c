@@ -2421,8 +2421,8 @@ VOID aisFsmRunEventJoinComplete(IN P_ADAPTER_T prAdapter, IN P_MSG_HDR_T prMsgHd
 						prAdapter->rWifiVar.rConnSettings.fgIsConnReqIssued = FALSE;
 						prAdapter->rWifiVar.rConnSettings.eReConnectLevel = RECONNECT_LEVEL_MIN;
 
-					if (prStaRec)
-						prAisBssInfo->u2DeauthReason = prStaRec->u2ReasonCode;
+						if (prStaRec)
+							prAisBssInfo->u2DeauthReason = prStaRec->u2ReasonCode;
 
 						prAisBssInfo->fgDisConnReassoc = FALSE;
 						kalIndicateStatusAndComplete(prAdapter->prGlueInfo,
