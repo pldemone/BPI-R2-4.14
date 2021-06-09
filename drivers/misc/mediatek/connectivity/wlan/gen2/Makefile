@@ -229,7 +229,7 @@ ifeq ($(WLAN_PROC), y)
 OS_OBJS += gl_proc.o
 endif
 
-ifeq ($(CONFIG_ARCH_MT7623), y)
+ifeq ($(CONFIG_MACH_MT7623), y)
 HIF_AHB_PDMA = $(HIF_DIR)mt8127/
 endif
 HIF_OBJS :=  $(HIF_DIR)arm.o \
