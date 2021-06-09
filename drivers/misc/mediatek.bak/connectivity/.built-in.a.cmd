@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/built-in.a := echo >/dev/null; rm -f drivers/misc/mediatek/connectivity/built-in.a; ccache arm-linux-gnueabihf-ar cDPrST drivers/misc/mediatek/connectivity/built-in.a drivers/misc/mediatek/connectivity/common/built-in.a

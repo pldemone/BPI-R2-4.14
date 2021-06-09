@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/built-in.o :=  arm-linux-gnueabihf-ld -EL    -r -o drivers/misc/mediatek/built-in.o drivers/misc/mediatek/usb20/built-in.o drivers/misc/mediatek/ice_debug/built-in.o drivers/misc/mediatek/connectivity/built-in.o drivers/misc/mediatek/btif/built-in.o 

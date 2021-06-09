@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/modules.order := {   cat drivers/misc/mediatek/connectivity/modules.order;   cat drivers/misc/mediatek/btif/modules.order; :; } | awk '!x[$$0]++' - > drivers/misc/mediatek/modules.order

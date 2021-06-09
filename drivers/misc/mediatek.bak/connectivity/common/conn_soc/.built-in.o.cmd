@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/common/conn_soc/built-in.o :=  arm-linux-gnueabihf-ld -EL    -r -o drivers/misc/mediatek/connectivity/common/conn_soc/built-in.o drivers/misc/mediatek/connectivity/common/conn_soc/core/built-in.o drivers/misc/mediatek/connectivity/common/conn_soc/linux/built-in.o drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/built-in.o 

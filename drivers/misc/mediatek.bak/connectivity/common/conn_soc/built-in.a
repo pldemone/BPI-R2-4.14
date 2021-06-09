@@ -1,0 +1,47 @@
+!<thin>
+//                                              440       `
+core/wmt_core.o/
+core/wmt_ctrl.o/
+core/wmt_func.o/
+core/wmt_ic_soc.o/
+core/wmt_lib.o/
+core/wmt_conf.o/
+core/btm_core.o/
+core/dbg_core.o/
+core/psm_core.o/
+core/stp_core.o/
+core/mtk_wcn_stub_alps.o/
+core/wmt_stp_exp.o/
+linux/pub/osal.o/
+linux/pub/bgw_desense.o/
+linux/pub/wmt_idc.o/
+linux/pri/stp_btif.o/
+linux/pri/stp_dbg.o/
+linux/pri/stp_exp.o/
+linux/pri/wmt_dev.o/
+linux/pri/wmt_exp.o/
+mt7623/mtk_wcn_consys_hw.o/
+mt7623/wmt_plat_alps.o/
+
+/0              0           0     0     644     267860    `
+/17             0           0     0     644     200416    `
+/34             0           0     0     644     185896    `
+/51             0           0     0     644     215324    `
+/70             0           0     0     644     249872    `
+/86             0           0     0     644     179156    `
+/103            0           0     0     644     224888    `
+/120            0           0     0     644     2084      `
+/137            0           0     0     644     305384    `
+/154            0           0     0     644     273652    `
+/171            0           0     0     644     121192    `
+/197            0           0     0     644     206052    `
+/217            0           0     0     644     242396    `
+/235            0           0     0     644     297512    `
+/260            0           0     0     644     143416    `
+/281            0           0     0     644     164256    `
+/303            0           0     0     644     452588    `
+/324            0           0     0     644     167820    `
+/345            0           0     0     644     361544    `
+/366            0           0     0     644     186056    `
+/387            0           0     0     644     284032    `
+/415            0           0     0     644     211284    `

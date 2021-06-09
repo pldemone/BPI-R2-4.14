@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/modules.order := {   echo drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/stp_chrdev_bt.ko;   echo drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/wmt_chrdev_wifi.ko; :; } | awk '!x[$$0]++' - > drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/modules.order

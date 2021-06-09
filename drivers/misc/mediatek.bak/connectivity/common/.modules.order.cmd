@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/common/modules.order := {   cat drivers/misc/mediatek/connectivity/common/conn_soc/modules.order;   cat drivers/misc/mediatek/connectivity/common/common_detect/modules.order; :; } | awk '!x[$$0]++' - > drivers/misc/mediatek/connectivity/common/modules.order

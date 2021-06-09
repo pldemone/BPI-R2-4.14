@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/usb20/built-in.o :=  arm-linux-gnueabihf-ld -EL    -r -o drivers/misc/mediatek/usb20/built-in.o drivers/misc/mediatek/usb20/mt2701/built-in.o drivers/misc/mediatek/usb20/musb_hdrc.o drivers/misc/mediatek/usb20/mtk_qmu.o drivers/misc/mediatek/usb20/musb_qmu.o 

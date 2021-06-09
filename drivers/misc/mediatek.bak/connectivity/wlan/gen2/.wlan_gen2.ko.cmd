@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/wlan/gen2/wlan_gen2.ko := ccache arm-linux-gnueabihf-ld -r  -EL  --build-id=sha1  -T scripts/module.lds -o drivers/misc/mediatek/connectivity/wlan/gen2/wlan_gen2.ko drivers/misc/mediatek/connectivity/wlan/gen2/wlan_gen2.o drivers/misc/mediatek/connectivity/wlan/gen2/wlan_gen2.mod.o;  true

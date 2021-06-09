@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/btif/built-in.a := echo >/dev/null; rm -f drivers/misc/mediatek/btif/built-in.a; ccache arm-linux-gnueabihf-ar cDPrST drivers/misc/mediatek/btif/built-in.a drivers/misc/mediatek/btif/common/built-in.a

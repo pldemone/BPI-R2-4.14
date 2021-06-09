@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/stp_chrdev_bt.mod := { echo  drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/stp_chrdev_bt.o;  echo; } > drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/stp_chrdev_bt.mod

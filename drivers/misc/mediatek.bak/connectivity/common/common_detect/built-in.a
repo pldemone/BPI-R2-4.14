@@ -1,0 +1,23 @@
+!<thin>
+//                                              220       `
+wmt_gpio.o/
+wmt_detect.o/
+sdio_detect.o/
+wmt_detect_pwr.o/
+drv_init/conn_drv_init.o/
+drv_init/common_drv_init.o/
+drv_init/bluetooth_drv_init.o/
+drv_init/gps_drv_init.o/
+drv_init/fm_drv_init.o/
+drv_init/wlan_drv_init.o/
+
+/0              0           0     0     644     159152    `
+/12             0           0     0     644     183964    `
+/26             0           0     0     644     162228    `
+/41             0           0     0     644     171264    `
+/59             0           0     0     644     142592    `
+/85             0           0     0     644     142444    `
+/113            0           0     0     644     136692    `
+/144            0           0     0     644     137548    `
+/169            0           0     0     644     137724    `
+/193            0           0     0     644     137564    `

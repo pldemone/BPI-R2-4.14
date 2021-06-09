@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/wlan/gen2/modules.order := {   echo drivers/misc/mediatek/connectivity/wlan/gen2/wlan_gen2.ko; :; } | awk '!x[$$0]++' - > drivers/misc/mediatek/connectivity/wlan/gen2/modules.order

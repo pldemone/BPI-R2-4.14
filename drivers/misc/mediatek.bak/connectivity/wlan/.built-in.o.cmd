@@ -1,0 +1,1 @@
+cmd_drivers/misc/mediatek/connectivity/wlan/built-in.o :=  arm-linux-gnueabihf-ld -EL    -r -o drivers/misc/mediatek/connectivity/wlan/built-in.o drivers/misc/mediatek/connectivity/wlan/gen2/built-in.o 

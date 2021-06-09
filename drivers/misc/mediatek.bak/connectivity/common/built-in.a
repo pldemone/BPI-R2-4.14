@@ -1,0 +1,66 @@
+!<thin>
+//                                              996       `
+conn_soc/core/wmt_core.o/
+conn_soc/core/wmt_ctrl.o/
+conn_soc/core/wmt_func.o/
+conn_soc/core/wmt_ic_soc.o/
+conn_soc/core/wmt_lib.o/
+conn_soc/core/wmt_conf.o/
+conn_soc/core/btm_core.o/
+conn_soc/core/dbg_core.o/
+conn_soc/core/psm_core.o/
+conn_soc/core/stp_core.o/
+conn_soc/core/mtk_wcn_stub_alps.o/
+conn_soc/core/wmt_stp_exp.o/
+conn_soc/linux/pub/osal.o/
+conn_soc/linux/pub/bgw_desense.o/
+conn_soc/linux/pub/wmt_idc.o/
+conn_soc/linux/pri/stp_btif.o/
+conn_soc/linux/pri/stp_dbg.o/
+conn_soc/linux/pri/stp_exp.o/
+conn_soc/linux/pri/wmt_dev.o/
+conn_soc/linux/pri/wmt_exp.o/
+conn_soc/mt7623/mtk_wcn_consys_hw.o/
+conn_soc/mt7623/wmt_plat_alps.o/
+common_detect/wmt_gpio.o/
+common_detect/wmt_detect.o/
+common_detect/sdio_detect.o/
+common_detect/wmt_detect_pwr.o/
+common_detect/drv_init/conn_drv_init.o/
+common_detect/drv_init/common_drv_init.o/
+common_detect/drv_init/bluetooth_drv_init.o/
+common_detect/drv_init/gps_drv_init.o/
+common_detect/drv_init/fm_drv_init.o/
+common_detect/drv_init/wlan_drv_init.o/
+/0              0           0     0     644     267860    `
+/26             0           0     0     644     200416    `
+/52             0           0     0     644     185896    `
+/78             0           0     0     644     215324    `
+/106            0           0     0     644     249872    `
+/131            0           0     0     644     179156    `
+/157            0           0     0     644     224888    `
+/183            0           0     0     644     2084      `
+/209            0           0     0     644     305384    `
+/235            0           0     0     644     273652    `
+/261            0           0     0     644     121192    `
+/296            0           0     0     644     206052    `
+/325            0           0     0     644     242396    `
+/352            0           0     0     644     297512    `
+/386            0           0     0     644     143416    `
+/416            0           0     0     644     164256    `
+/447            0           0     0     644     452588    `
+/477            0           0     0     644     167820    `
+/507            0           0     0     644     361544    `
+/537            0           0     0     644     186056    `
+/567            0           0     0     644     284032    `
+/604            0           0     0     644     211284    `
+/637            0           0     0     644     159152    `
+/663            0           0     0     644     183964    `
+/691            0           0     0     644     162228    `
+/720            0           0     0     644     171264    `
+/752            0           0     0     644     142592    `
+/792            0           0     0     644     142444    `
+/834            0           0     0     644     136692    `
+/879            0           0     0     644     137548    `
+/918            0           0     0     644     137724    `
+/956            0           0     0     644     137564    `
