@@ -9,6 +9,7 @@ uploadserver=192.168.0.10
 uploaddir=/var/lib/tftp
 
 case $1 in
+	"defconfig") nano arch/arm/configs/mt7623n_evb_bpi_defconfig;;
 	"importconfig") make mt7623n_evb_bpi_defconfig;;
 	"config") make menuconfig;;
 	"build") make ${CFLAGS} UIMAGE_LOADADDR=0x80008000 uImage dtbs modules 2> >(tee build.log);;
