@@ -24,7 +24,7 @@
 #endif
 
 unsigned int gComboChipId = -1;
-struct sdio_func *g_func = NULL;
+struct sdio_func *g_func;
 
 MTK_WCN_HIF_SDIO_CHIP_INFO gChipInfoArray[] = {
 	/* MT6620 *//* Not an SDIO standard class device */
@@ -37,6 +37,12 @@ MTK_WCN_HIF_SDIO_CHIP_INFO gChipInfoArray[] = {
 
 	/* MT6630 *//* SDIO1: Wi-Fi, SDIO2: BGF */
 	{{SDIO_DEVICE(0x037A, 0x6630)}, 0x6630},
+
+	/* MT6632 *//* SDIO1: Wi-Fi */
+	{{SDIO_DEVICE(0x037A, 0x6602)}, 0x6632},
+
+	/* MT6632 *//* SDIO2: BGF */
+	{{SDIO_DEVICE(0x037A, 0x6632)}, 0x6632},
 
 };
 
@@ -63,6 +69,12 @@ static const struct sdio_device_id mtk_sdio_id_tbl[] = {
 
 	/* MT6630 *//* SDIO1: Wi-Fi, SDIO2: BGF */
 	{SDIO_DEVICE(0x037A, 0x6630)},
+
+	/* MT6632 *//* SDIO1: Wi-Fi */
+	{SDIO_DEVICE(0x037A, 0x6602)},
+
+	/* MT6632 *//* SDIO2: BGF */
+	{SDIO_DEVICE(0x037A, 0x6632)},
 	{ /* end: all zeroes */ },
 };
 
@@ -85,7 +97,7 @@ int hif_sdio_is_chipid_valid(int chipId)
 
 	int left = 0;
 	int middle = 0;
-	int right = sizeof(gChipInfoArray) / sizeof(gChipInfoArray[0]) - 1;
+	int right = ARRAY_SIZE(gChipInfoArray) - 1;
 
 	if ((chipId < gChipInfoArray[left].chipId) || (chipId > gChipInfoArray[right].chipId))
 		return index;
@@ -104,7 +116,7 @@ int hif_sdio_is_chipid_valid(int chipId)
 		middle = (left + right) / 2;
 	}
 
-	if (0 > index)
+	if (index < 0)
 		WMT_DETECT_ERR_FUNC("no supported chipid found\n");
 	else
 		WMT_DETECT_INFO_FUNC("index:%d, chipId:0x%x\n", index, gChipInfoArray[index].chipId);
@@ -114,7 +126,7 @@ int hif_sdio_is_chipid_valid(int chipId)
 
 int hif_sdio_match_chipid_by_dev_id(const struct sdio_device_id *id)
 {
-	int maxIndex = sizeof(gChipInfoArray) / sizeof(gChipInfoArray[0]);
+	int maxIndex = ARRAY_SIZE(gChipInfoArray);
 	int index = 0;
 	struct sdio_device_id *localId = NULL;
 	int chipId = -1;
@@ -126,12 +138,12 @@ int hif_sdio_match_chipid_by_dev_id(const struct sdio_device_id *id)
 			WMT_DETECT_INFO_FUNC
 			    ("valid chipId found, index(%d), vendor id(0x%x), device id(0x%x), chip id(0x%x)\n", index,
 			     localId->vendor, localId->device, chipId);
+			mtk_wcn_wmt_set_chipid(chipId);
 			gComboChipId = chipId;
-			mtk_wcn_wmt_set_chipid(gComboChipId);
 			break;
 		}
 	}
-	if (0 > chipId) {
+	if (chipId < 0) {
 		WMT_DETECT_ERR_FUNC("No valid chipId found, vendor id(0x%x), device id(0x%x)\n", id->vendor,
 				    id->device);
 	}
@@ -145,13 +157,13 @@ int sdio_detect_query_chipid(int waitFlag)
 	unsigned int maxTimeSlot = 15;
 	unsigned int counter = 0;
 	/* gComboChipId = 0x6628; */
-	if (0 == waitFlag)
+	if (waitFlag == 0)
 		return gComboChipId;
-	if (0 <= hif_sdio_is_chipid_valid(gComboChipId))
+	if (hif_sdio_is_chipid_valid(gComboChipId) >= 0)
 		return gComboChipId;
 
 	while (counter < maxTimeSlot) {
-		if (0 <= hif_sdio_is_chipid_valid(gComboChipId))
+		if (hif_sdio_is_chipid_valid(gComboChipId) >= 0)
 			break;
 		msleep(timeSlotMs);
 		counter++;
@@ -175,13 +187,13 @@ int sdio_detect_do_autok(int chipId)
 		return 0;
 	}
 #endif
-	if (0x6630 == chipId) {
+	if (0x6630 == chipId || 0x6632 == chipId) {
 #ifdef CONFIG_SDIOAUTOK_SUPPORT
-		if (NULL != g_func) {
+		if (g_func != NULL) {
 			WMT_DETECT_INFO_FUNC("wait_sdio_autok_ready++\n");
 			i_ret = wait_sdio_autok_ready(g_func->card->host);
 			WMT_DETECT_INFO_FUNC("wait_sdio_autok_ready--\n");
-			if (0 == i_ret) {
+			if (i_ret == 0) {
 				WMT_DETECT_INFO_FUNC("wait_sdio_autok_ready return success\n");
 			} else {
 				WMT_DETECT_INFO_FUNC("wait_sdio_autok_ready return fail, i_ret:%d\n", i_ret);
@@ -223,7 +235,7 @@ static int sdio_detect_probe(struct sdio_func *func, const struct sdio_device_id
 	WMT_DETECT_INFO_FUNC("vendor(0x%x) device(0x%x) num(0x%x)\n", func->vendor, func->device, func->num);
 	chipId = hif_sdio_match_chipid_by_dev_id(id);
 
-	if ((0x6630 == chipId) && (1 == func->num)) {
+	if ((chipId == 0x6630 || chipId == 0x6632) && (func->num == 1)) {
 		int ret = 0;
 
 		g_func = func;

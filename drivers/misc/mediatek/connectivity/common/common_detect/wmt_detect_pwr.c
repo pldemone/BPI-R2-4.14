@@ -12,7 +12,12 @@
 * If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* ALPS header files */
+#ifndef CONFIG_RTC_DRV_MT6397
 #include <mtk_rtc.h>
+#else
+#include <linux/mfd/mt6397/rtc_misc.h>
+#endif
 
 #ifdef DFT_TAG
 #undef DFT_TAG
@@ -29,15 +34,9 @@ static int wmt_detect_dump_pin_conf(void)
 {
 	WMT_DETECT_DBG_FUNC("[WMT-DETECT]=>dump wmt pin configuration start<=\n");
 
-	WMT_DETECT_INFO_FUNC("LDO(GPIO%d), PMU(GPIO%d), PMUV28(GPIO%d)\n",
-			gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_LDO_EN_PIN].gpio_num,
+	WMT_DETECT_INFO_FUNC("PMU(GPIO%d), RST(GPIO%d)\n",
 			gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMU_EN_PIN].gpio_num,
-			gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMUV28_EN_PIN].gpio_num);
-
-	WMT_DETECT_INFO_FUNC("RST(GPIO%d), BGF_EINT(GPIO%d), BGF_EINT_NUM(%d)\n",
-			gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num,
-			gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_BGF_EINT_PIN].gpio_num,
-			gpio_to_irq(gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_BGF_EINT_PIN].gpio_num));
+			gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num);
 
 	WMT_DETECT_INFO_FUNC("WIFI_EINT(GPIO%d), WIFI_EINT_NUM(%d)\n",
 			gpio_ctrl_info.gpio_ctrl_state[GPIO_WIFI_EINT_PIN].gpio_num,
@@ -50,7 +49,7 @@ static int wmt_detect_dump_pin_conf(void)
 
 int _wmt_detect_output_low(unsigned int id)
 {
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[id].gpio_num) {
+	if (gpio_ctrl_info.gpio_ctrl_state[id].gpio_num != INVALID_PIN_ID) {
 		gpio_direction_output(gpio_ctrl_info.gpio_ctrl_state[id].gpio_num, 0);
 		WMT_DETECT_DBG_FUNC("WMT-DETECT: set GPIO%d to output %d\n",
 				gpio_ctrl_info.gpio_ctrl_state[id].gpio_num,
@@ -62,7 +61,7 @@ int _wmt_detect_output_low(unsigned int id)
 
 int _wmt_detect_output_high(unsigned int id)
 {
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[id].gpio_num) {
+	if (gpio_ctrl_info.gpio_ctrl_state[id].gpio_num != INVALID_PIN_ID) {
 		gpio_direction_output(gpio_ctrl_info.gpio_ctrl_state[id].gpio_num, 1);
 		WMT_DETECT_DBG_FUNC("WMT-DETECT: set GPIO%d to output %d\n",
 				gpio_ctrl_info.gpio_ctrl_state[id].gpio_num,
@@ -76,7 +75,7 @@ int _wmt_detect_read_gpio_input(unsigned int id)
 {
 	int retval = 0;
 
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[id].gpio_num) {
+	if (gpio_ctrl_info.gpio_ctrl_state[id].gpio_num != INVALID_PIN_ID) {
 		retval = gpio_get_value(gpio_ctrl_info.gpio_ctrl_state[id].gpio_num);
 		WMT_DETECT_DBG_FUNC("WMT-DETECT: get GPIO%d val%d\n",
 				gpio_ctrl_info.gpio_ctrl_state[id].gpio_num, retval);
@@ -91,23 +90,27 @@ int _wmt_detect_read_gpio_input(unsigned int id)
  * 3. RST control is a must
  * 4. WIFI_EINT pin control is a must, used for GPIO mode for EINT status checkup
  * 5. RTC32k clock control is a must
- * */
+ *
+ */
 static int wmt_detect_chip_pwr_on(void)
 {
 	int retval = -1;
 	/*setting validiation check*/
-	if ((INVALID_PIN_ID == gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMU_EN_PIN].gpio_num) ||
-		(INVALID_PIN_ID == gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num) ||
-		(INVALID_PIN_ID == gpio_ctrl_info.gpio_ctrl_state[GPIO_WIFI_EINT_PIN].gpio_num)) {
-		WMT_DETECT_ERR_FUNC("WMT-DETECT: either PMU(%d) or RST(%d) or WIFI_EINT(%d) is not set\n",
+	if ((gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMU_EN_PIN].gpio_num == INVALID_PIN_ID) ||
+		(gpio_ctrl_info.gpio_ctrl_state[GPIO_WIFI_EINT_PIN].gpio_num == INVALID_PIN_ID)) {
+		WMT_DETECT_ERR_FUNC("WMT-DETECT: either PMU(%d) or WIFI_EINT(%d) is not set\n",
 				gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMU_EN_PIN].gpio_num,
-				gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num,
 				gpio_ctrl_info.gpio_ctrl_state[GPIO_WIFI_EINT_PIN].gpio_num);
 
 		return retval;
 	}
+	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num == INVALID_PIN_ID) {
+		WMT_DETECT_WARN_FUNC("WMT-DETECT: RST(%d) is not set, if it`s not 6632 project, please check it\n",
+				gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num);
+
+	}
 	/*set LDO/PMU/RST to output 0, no pull*/
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_LDO_EN_PIN].gpio_num)
+	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_LDO_EN_PIN].gpio_num != INVALID_PIN_ID)
 		_wmt_detect_output_low(GPIO_COMBO_LDO_EN_PIN);
 	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMU_EN_PIN].gpio_state[GPIO_PULL_DIS]) {
 		pinctrl_select_state(gpio_ctrl_info.pinctrl_info,
@@ -129,7 +132,7 @@ static int wmt_detect_chip_pwr_on(void)
 #endif
 
 	/*pull high LDO*/
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_LDO_EN_PIN].gpio_num)
+	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_LDO_EN_PIN].gpio_num != INVALID_PIN_ID)
 		_wmt_detect_output_high(GPIO_COMBO_LDO_EN_PIN);
 	/*sleep for LDO stable time*/
 	msleep(MAX_LDO_STABLE_TIME);
@@ -174,13 +177,13 @@ static int wmt_detect_chip_pwr_off(void)
 {
 
 	/*set RST pin to input low status*/
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_LDO_EN_PIN].gpio_num)
+	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_LDO_EN_PIN].gpio_num != INVALID_PIN_ID)
 		_wmt_detect_output_low(GPIO_COMBO_LDO_EN_PIN);
 	/*set RST pin to input low status*/
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num)
+	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_RST_PIN].gpio_num != INVALID_PIN_ID)
 		_wmt_detect_output_low(GPIO_COMBO_RST_PIN);
 	/*set PMU pin to input low status*/
-	if (INVALID_PIN_ID != gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMU_EN_PIN].gpio_num)
+	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_COMBO_PMU_EN_PIN].gpio_num != INVALID_PIN_ID)
 		_wmt_detect_output_low(GPIO_COMBO_PMU_EN_PIN);
 	return 0;
 }
@@ -189,7 +192,7 @@ int wmt_detect_read_ext_cmb_status(void)
 {
 	int retval = 0;
 	/*read WIFI_EINT pin status*/
-	if (INVALID_PIN_ID == gpio_ctrl_info.gpio_ctrl_state[GPIO_WIFI_EINT_PIN].gpio_num) {
+	if (gpio_ctrl_info.gpio_ctrl_state[GPIO_WIFI_EINT_PIN].gpio_num == INVALID_PIN_ID) {
 		retval = 0;
 		WMT_DETECT_ERR_FUNC("WMT-DETECT: no WIFI_EINT pin set\n");
 	} else {
@@ -203,7 +206,7 @@ int wmt_detect_chip_pwr_ctrl(int on)
 {
 	int retval = -1;
 
-	if (0 == on) {
+	if (on == 0) {
 		/*power off combo chip */
 		retval = wmt_detect_chip_pwr_off();
 	} else {
@@ -218,7 +221,7 @@ int wmt_detect_sdio_pwr_ctrl(int on)
 {
 	int retval = -1;
 #ifdef MTK_WCN_COMBO_CHIP_SUPPORT
-	if (0 == on) {
+	if (on == 0) {
 		/*power off SDIO slot */
 		retval = board_sdio_ctrl(1, 0);
 	} else {

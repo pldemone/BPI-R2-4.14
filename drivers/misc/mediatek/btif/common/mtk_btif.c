@@ -123,10 +123,8 @@ static int _btif_exit_dpidle_from_dpidle(p_mtk_btif p_btif);
 static int _btif_enter_dpidle_from_on(p_mtk_btif p_btif);
 static int _btif_enter_dpidle_from_sus(p_mtk_btif p_btif);
 
-#if ENABLE_BTIF_TX_DMA
 static int _btif_vfifo_deinit(p_mtk_btif_dma p_dma);
 static int _btif_vfifo_init(p_mtk_btif_dma p_dma);
-#endif
 
 static bool _btif_is_tx_complete(p_mtk_btif p_btif);
 static int _btif_init(p_mtk_btif p_btif);
@@ -189,9 +187,7 @@ mtk_btif_dma g_dma[BTIF_PORT_NR][BTIF_DIR_MAX] = {
 static int g_max_pkg_len = G_MAX_PKG_LEN; /*DMA vFIFO is set to 8 * 1024, we set this to 7/8 * vFIFO size*/
 static int g_max_pding_data_size = BTIF_RX_BUFFER_SIZE * 3 / 4;
 
-
-static int mtk_btif_dbg_lvl = BTIF_LOG_ERR;
-
+static int mtk_btif_dbg_lvl = BTIF_LOG_INFO;
 #if BTIF_RXD_BE_BLOCKED_DETECT
 static struct timeval btif_rxd_time_stamp[MAX_BTIF_RXD_TIME_REC];
 #endif
@@ -1844,7 +1840,6 @@ bool _btif_is_tx_complete(p_mtk_btif p_btif)
 
 /*--------------------------------Functions-------------------------------------------*/
 
-#if ENABLE_BTIF_TX_DMA
 static int _btif_vfifo_init(p_mtk_btif_dma p_dma)
 {
 	P_DMA_VFIFO p_vfifo = NULL;
@@ -1892,8 +1887,7 @@ static int _btif_vfifo_init(p_mtk_btif_dma p_dma)
 
 	return 0;
 }
-#endif
-#if ENABLE_BTIF_TX_DMA
+
 static int _btif_vfifo_deinit(p_mtk_btif_dma p_dma)
 {
 	P_DMA_VFIFO p_vfifo = NULL;
@@ -1928,7 +1922,6 @@ static int _btif_vfifo_deinit(p_mtk_btif_dma p_dma)
 
 	return 0;
 }
-#endif
 
 static int _btif_state_init(p_mtk_btif p_btif)
 {
@@ -2728,6 +2721,7 @@ int _btif_dma_write(p_mtk_btif p_btif,
 	P_MTK_DMA_INFO_STR p_dma_info = p_btif->p_tx_dma->p_dma_info;
 
 	_btif_irq_ctrl_sync(p_dma_info->p_irq, false);
+
 	do {
 		/*wait until tx is allowed*/
 		while (!hal_dma_is_tx_allow(p_dma_info) &&

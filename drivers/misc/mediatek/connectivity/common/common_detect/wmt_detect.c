@@ -35,20 +35,12 @@
 #define WMT_DETECT_DRVIER_NAME "mtk_wcn_detect"
 #define WMT_DETECT_DEVICE_NAME "wmtdetect"
 
-struct class *pDetectClass = NULL;
-struct device *pDetectDev = NULL;
+struct class *pDetectClass;
+struct device *pDetectDev;
 static int gWmtDetectMajor = WMT_DETECT_MAJOR;
 static struct cdev gWmtDetectCdev;
 unsigned int gWmtDetectDbgLvl = WMT_DETECT_LOG_INFO;
-
-
-#ifdef MTK_WCN_COMBO_CHIP_SUPPORT
-inline unsigned int wmt_plat_get_soc_chipid(void)
-{
-	WMT_DETECT_INFO_FUNC("no soc chip supported, due to MTK_WCN_SOC_CHIP_SUPPORT is not set.\n");
-	return -1;
-}
-#endif
+static ENUM_WMT_CHIP_TYPE g_chip_type = WMT_CHIP_TYPE_INVALID;
 
 static int wmt_detect_open(struct inode *inode, struct file *file)
 {
@@ -173,9 +165,9 @@ int wmt_detect_ext_chip_pwr_on(void)
 	/* wmt_plat_pwr_ctrl(FUNC_ON); */
 #ifdef MTK_WCN_COMBO_CHIP_SUPPORT
 	WMT_DETECT_INFO_FUNC("++\n");
-	if (0 != wmt_detect_chip_pwr_ctrl(1))
+	if (wmt_detect_chip_pwr_ctrl(1) != 0)
 		return -1;
-	if (0 != wmt_detect_sdio_pwr_ctrl(1))
+	if (wmt_detect_sdio_pwr_ctrl(1) != 0)
 		return -2;
 	return 0;
 #else
@@ -212,16 +204,16 @@ int wmt_detect_ext_chip_detect(void)
 	/*read BGF_EINT_PIN status */
 	bgfEintStatus = wmt_detect_read_ext_cmb_status();
 
-	if (0 == bgfEintStatus) {
+	if (bgfEintStatus == 0) {
 		/*external chip does not exist */
 		WMT_DETECT_INFO_FUNC("external combo chip not detected\n");
-	} else if (1 == bgfEintStatus) {
+	} else if (bgfEintStatus == 1) {
 		/*combo chip exists */
 		WMT_DETECT_INFO_FUNC("external combo chip detected\n");
 
 		/*detect chipid by sdio_detect module */
 		chipId = sdio_detect_query_chipid(1);
-		if (0 <= hif_sdio_is_chipid_valid(chipId))
+		if (hif_sdio_is_chipid_valid(chipId) >= 0)
 			WMT_DETECT_INFO_FUNC("valid external combo chip id (0x%x)\n", chipId);
 		else
 			WMT_DETECT_INFO_FUNC("invalid external combo chip id (0x%x)\n", chipId);
@@ -255,8 +247,31 @@ static int wmt_detect_remove(struct platform_device *pdev)
 }
 #endif
 
+int wmt_detect_set_chip_type(int chip_id)
+{
+	switch (chip_id) {
+	case 0x6620:
+	case 0x6628:
+	case 0x6630:
+	case 0x6632:
+		g_chip_type = WMT_CHIP_TYPE_COMBO;
+		break;
+	case -1:
+		break;
+	default:
+		g_chip_type = WMT_CHIP_TYPE_SOC;
+		break;
+	}
+	return 0;
+}
+ENUM_WMT_CHIP_TYPE wmt_detect_get_chip_type(void)
+{
+	return g_chip_type;
+}
+
+
 #ifdef MTK_WCN_COMBO_CHIP_SUPPORT
-static struct of_device_id wmt_detect_match[] = {
+static const struct of_device_id wmt_detect_match[] = {
 	{ .compatible = "mediatek,connectivity-combo", },
 	{}
 };
