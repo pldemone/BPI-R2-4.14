@@ -54,7 +54,7 @@ endif
 ifeq ($(CONFIG_MTK_COMBO), y)
 obj-y += core/
 obj-y += linux/
-#obj-y += platform/
-obj-y += mt7623/
+obj-y += platform/
+#obj-y += mt7623/
 
 endif
