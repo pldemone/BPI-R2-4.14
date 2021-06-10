@@ -1,6 +1,10 @@
 $(info Platform-Makefile)
+
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+
 $(info $(CONFIG_MTK_COMBO))
 $(info plat:$(MTK_PLATFORM))
+$(info combo:$(CONFIG_MTK_COMBO_CHIP))
 
 ifeq ($(CONFIG_MTK_COMBO),y)
 

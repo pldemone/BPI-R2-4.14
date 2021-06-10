@@ -1,4 +1,8 @@
-$(warn common_main/Makefile)
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+
+
+$(info common_main/Makefile)
+$(info common-main_plat:$(MTK_PLATFORM))
 subdir-ccflags-y += \
 	-I$(src)/linux/include \
 	-I$(src)/linux/pri/include \

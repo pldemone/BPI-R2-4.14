@@ -14,6 +14,7 @@
 # Connectivity combo driver
 # If KERNELRELEASE is defined, we've been invoked from the
 # kernel build system and can use its language.
+$(info connectivity_plat:$(MTK_PLATFORM))
 ifneq ($(KERNELRELEASE),)
 subdir-ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE
 ifeq ($(CONFIG_ARM64), y)

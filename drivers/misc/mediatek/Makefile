@@ -13,6 +13,8 @@
 
 #$(call all-subdir-src-or-makefile)
 MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+
+$(info misc-mtk_plat:$(MTK_PLATFORM))
 subdir-ccflags-y += -Werror
 #subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/hibcore
 subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
