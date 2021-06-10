@@ -59,6 +59,14 @@ config MTK_COMBO_CHIP_CONSYS_8167
           is
           MT8167(BT/WIFI/GPS/FM combo chip)
 
+config MTK_COMBO_CHIP_CONSYS_7623
+        bool "MTK MT7623 combo chip support"
+        help
+          this config is used to decided SOC consys version
+          in current platform
+          is
+          MT7623(BT/WIFI/GPS/FM combo chip (6625l))
+
 endchoice
 
 config MTK_COMBO_CHIP
@@ -69,6 +77,7 @@ config MTK_COMBO_CHIP
 	default "MT6632" if MTK_COMBO_CHIP_MT6632
 	default "CONSYS_6757" if MTK_COMBO_CHIP_CONSYS_6757
 	default "CONSYS_8167" if MTK_COMBO_CHIP_CONSYS_8167
+	default "CONSYS_7623" if MTK_COMBO_CHIP_CONSYS_7623
 	help
 	  this feature is used to identify combo chip version or SOC chip
 	  consys version.
