@@ -1,4 +1,5 @@
 #!/bin/bash
+export LANG=C
 export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnueabihf-
 export INSTALL_MOD_PATH=output
