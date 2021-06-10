@@ -1,3 +1,7 @@
+$(info Platform-Makefile)
+$(info $(CONFIG_MTK_COMBO))
+$(info plat:$(MTK_PLATFORM))
+
 ifeq ($(CONFIG_MTK_COMBO),y)
 
 ccflags-y += \
@@ -20,8 +24,10 @@ endif
 
 PLAT := alps
 ifneq ($(filter "CONSYS_%",$(CONFIG_MTK_COMBO_CHIP)),)
+$(info use $(MTK_PLATFORM).o)
 obj-y	+= $(MTK_PLATFORM).o
 endif
+$(info use $(PLAT).o)
 obj-y	+= wmt_plat_$(PLAT).o
 #obj-y	+= wmt_plat_stub.o
 obj-y	+= mtk_wcn_cmb_hw.o

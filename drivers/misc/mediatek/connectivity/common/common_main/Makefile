@@ -1,3 +1,4 @@
+$(warn common_main/Makefile)
 subdir-ccflags-y += \
 	-I$(src)/linux/include \
 	-I$(src)/linux/pri/include \
