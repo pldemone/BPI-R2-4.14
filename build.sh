@@ -10,6 +10,8 @@ uploadserver=192.168.0.10
 uploaddir=/var/lib/tftp
 
 case $1 in
+	"dtsi") nano arch/arm/boot/dts/mt7623.dtsi;;
+	"dts") nano arch/arm/boot/dts/mt7623n-bpi-r2.dts;;
 	"defconfig") nano arch/arm/configs/mt7623n_evb_bpi_defconfig;;
 	"importconfig") make mt7623n_evb_bpi_defconfig;;
 	"config") make menuconfig;;
