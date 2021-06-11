@@ -25,7 +25,7 @@ obj-$(CONFIG_MTK_COMBO_WIFI) += wmt_chrdev_wifi.o
 #########################################################
 # WLAN driver
 
-#	obj-y   +=  gen2/
+obj-y   +=  gen2/
 
 ifneq ($(filter "MT6630",$(CONFIG_MTK_COMBO_CHIP)),)
 	obj-y   +=  gen3/
