@@ -14,7 +14,7 @@
 #ifndef _MT6392_PMIC_UPMU_HW_H_
 #define _MT6392_PMIC_UPMU_HW_H_
 
-#include <linux/mfd/mt6392/registers.h>
+#include <linux/mfd/mt6323/registers.h>
 
 /* mask is HEX;  shift is Integer */
 #define MT6392_PMIC_RG_VCDT_HV_EN_ADDR                                   MT6392_CHR_CON0
