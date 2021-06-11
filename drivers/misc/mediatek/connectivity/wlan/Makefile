@@ -36,7 +36,7 @@ ifneq ($(filter "CONSYS_6797",$(CONFIG_MTK_COMBO_CHIP)),)
 	subdir-ccflags-y += -D CFG_SPM_WORKAROUND_FOR_HOTSPOT=0
 	obj-y   +=  gen3/
 else ifneq ($(filter "CONSYS_%",$(CONFIG_MTK_COMBO_CHIP)),)
-#	$(info include gen2)
+$(warning include gen2)
 	obj-y   +=  gen2/
 endif
 

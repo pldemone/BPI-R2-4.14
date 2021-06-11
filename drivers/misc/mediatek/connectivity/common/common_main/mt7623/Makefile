@@ -1,4 +1,7 @@
 # WMT HAL driver for MT7623
+$(info mt7623-Makefile)
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+$(warning MTK_PLATFORM $(MTK_PLATFORM))
 
 ccflags-y += \
 	-I$(src)/include \
