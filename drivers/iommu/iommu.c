@@ -306,12 +306,13 @@ void iommu_release_device(struct device *dev)
 
 	if (!dev->iommu)
 		return;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	iommu_device_unlink(dev->iommu->iommu_dev, dev);
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	ops->release_device(dev);
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	iommu_group_remove_device(dev);
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	module_put(ops->owner);
 	dev_iommu_free(dev);
 }
@@ -921,15 +922,17 @@ EXPORT_SYMBOL_GPL(iommu_group_add_device);
  */
 void iommu_group_remove_device(struct device *dev)
 {
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	struct iommu_group *group = dev->iommu_group;
 	struct group_device *tmp_device, *device = NULL;
 
-	dev_info(dev, "Removing from iommu group %d\n", group->id);
+printk(KERN_ALERT "DEBUG: Passed %s %d 0x%08x\n",__FUNCTION__,__LINE__,(unsigned int)group);
+	//dev_info(dev, "Removing from iommu group %d\n", group->id);
 
 	/* Pre-notify listeners that a device is being removed. */
 	blocking_notifier_call_chain(&group->notifier,
 				     IOMMU_GROUP_NOTIFY_DEL_DEVICE, dev);
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	mutex_lock(&group->mutex);
 	list_for_each_entry(tmp_device, &group->devices, list) {
 		if (tmp_device->dev == dev) {
@@ -1785,33 +1788,41 @@ int bus_iommu_probe(struct bus_type *bus)
 	 * created.
 	 */
 	ret = bus_for_each_dev(bus, NULL, &group_list, probe_iommu_group);
+printk(KERN_ALERT "DEBUG: Passed %s %d ret:%d\n",__FUNCTION__,__LINE__,ret);
 	if (ret)
 		return ret;
 
+printk(KERN_ALERT "DEBUG: Passed %s %d\n",__FUNCTION__,__LINE__);
 	list_for_each_entry_safe(group, next, &group_list, entry) {
 		/* Remove item from the list */
 		list_del_init(&group->entry);
 
 		mutex_lock(&group->mutex);
 
+printk(KERN_ALERT "DEBUG: Passed %s %d\n",__FUNCTION__,__LINE__);
 		/* Try to allocate default domain */
 		probe_alloc_default_domain(bus, group);
 
+printk(KERN_ALERT "DEBUG: Passed %s %d\n",__FUNCTION__,__LINE__);
 		if (!group->default_domain) {
 			mutex_unlock(&group->mutex);
 			continue;
 		}
 
+printk(KERN_ALERT "DEBUG: Passed %s %d\n",__FUNCTION__,__LINE__);
 		iommu_group_create_direct_mappings(group);
 
+printk(KERN_ALERT "DEBUG: Passed %s %d\n",__FUNCTION__,__LINE__);
 		ret = __iommu_group_dma_attach(group);
 
+printk(KERN_ALERT "DEBUG: Passed %s %d ret:%d\n",__FUNCTION__,__LINE__,ret);
 		mutex_unlock(&group->mutex);
 
 		if (ret)
 			break;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		__iommu_group_dma_finalize(group);
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	}
 
 	return ret;
@@ -1821,21 +1832,29 @@ static int iommu_bus_init(struct bus_type *bus, const struct iommu_ops *ops)
 {
 	struct notifier_block *nb;
 	int err;
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	nb = kzalloc(sizeof(struct notifier_block), GFP_KERNEL);
 	if (!nb)
 		return -ENOMEM;
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	nb->notifier_call = iommu_bus_notifier;
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	err = bus_register_notifier(bus, nb);
+printk(KERN_ALERT "DEBUG: Passed %s %d err:%d\n",__FUNCTION__,__LINE__,err);
 	if (err)
 		goto out_free;
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	err = bus_iommu_probe(bus);
+printk(KERN_ALERT "DEBUG: Passed %s %d err:%d\n",__FUNCTION__,__LINE__,err);
+
 	if (err)
 		goto out_err;
 
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	return 0;
 
@@ -1866,22 +1885,23 @@ out_free:
 int bus_set_iommu(struct bus_type *bus, const struct iommu_ops *ops)
 {
 	int err;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ops == NULL) {
 		bus->iommu_ops = NULL;
 		return 0;
 	}
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (bus->iommu_ops != NULL)
 		return -EBUSY;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	bus->iommu_ops = ops;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	/* Do IOMMU specific setup for this bus-type */
 	err = iommu_bus_init(bus, ops);
+printk(KERN_ALERT "DEBUG: Passed %s %d err:%d\n",__FUNCTION__,__LINE__,err);
 	if (err)
 		bus->iommu_ops = NULL;
-
+printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	return err;
 }
 EXPORT_SYMBOL_GPL(bus_set_iommu);
