@@ -376,13 +376,20 @@ static int mtk_iommu_create_mapping(struct device *dev,
 			args->args_count);
 		return -EINVAL;
 	}
-
+dev_err(dev, " %s. %d. fwspec %px.\n", __func__, __LINE__, fwspec);
 	if (!fwspec) {
 		ret = iommu_fwspec_init(dev, &args->np->fwnode, &mtk_iommu_ops);
 		if (ret)
 			return ret;
 		fwspec = dev_iommu_fwspec_get(dev);
+               dev_err(dev, " %s. %d. set mtk ops.fwspec %px ret %d.\n", __func__,__LINE__,
+                       fwspec, ret);
 	} else if (dev_iommu_fwspec_get(dev)->ops != &mtk_iommu_ops) {
+               dev_err(dev, " %s. %d. ops not match %px. %px.\n",
+                       __func__, __LINE__,
+                       dev_iommu_fwspec_get(dev),
+                       dev_iommu_fwspec_get(dev)->ops);
+               dump_stack();
 		return -EINVAL;
 	}
 
