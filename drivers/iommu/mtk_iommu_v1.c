@@ -377,12 +377,20 @@ static int mtk_iommu_create_mapping(struct device *dev,
 		return -EINVAL;
 	}
 
+	dev_err(dev, " %s. %d. fwspec %px.\n", __func__, __LINE__, fwspec);
 	if (!fwspec) {
 		ret = iommu_fwspec_init(dev, &args->np->fwnode, &mtk_iommu_ops);
 		if (ret)
 			return ret;
 		fwspec = dev_iommu_fwspec_get(dev);
+		dev_err(dev, " %s. %d. set mtk ops.fwspec %px ret %d.\n", __func__,__LINE__,
+			fwspec, ret);
 	} else if (dev_iommu_fwspec_get(dev)->ops != &mtk_iommu_ops) {
+		dev_err(dev, " %s. %d. ops not match %px. %px.\n",
+			__func__, __LINE__,
+			dev_iommu_fwspec_get(dev),
+			dev_iommu_fwspec_get(dev)->ops);
+		dump_stack();
 		return -EINVAL;
 	}
 
@@ -401,6 +409,7 @@ static int mtk_iommu_create_mapping(struct device *dev,
 
 	data = dev_iommu_priv_get(dev);
 	mtk_mapping = data->mapping;
+	dev_err(dev, " %s. %d. mtkmapping %px.\n", __func__, __LINE__, mtk_mapping);
 	if (!mtk_mapping) {
 		/* MTK iommu support 4GB iova address space. */
 		mtk_mapping = arm_iommu_create_mapping(&platform_bus_type,
@@ -434,8 +443,10 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 
 		err = mtk_iommu_create_mapping(dev, &iommu_spec);
 		of_node_put(iommu_spec.np);
-		if (err)
+		if (err) {
+			dev_err(dev, " %s. %d. fail %d.\n", __func__, __LINE__, err);
 			return ERR_PTR(err);
+		}
 
 		/* dev->iommu_fwspec might have changed */
 		fwspec = dev_iommu_fwspec_get(dev);
@@ -445,6 +456,8 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 	if (!fwspec || fwspec->ops != &mtk_iommu_ops)
 		return ERR_PTR(-ENODEV); /* Not a iommu client device */
 
+	dev_err(dev, " %s. %d. probe.\n", __func__, __LINE__);
+
 	data = dev_iommu_priv_get(dev);
 
 	/* Link the consumer device with the smi-larb device(supplier) */
@@ -452,6 +465,8 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 	larbdev = data->larb_imu[larbid].dev;
 	link = device_link_add(dev, larbdev,
 			       DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+	dev_err(dev, " %s. %d. devlink %d. larb %s.\n", __func__, __LINE__,
+		larbid, dev_name(larbdev));
 	if (!link)
 		dev_err(dev, "Unable to link %s\n", dev_name(larbdev));
 
@@ -466,6 +481,8 @@ static void mtk_iommu_probe_finalize(struct device *dev)
 
 	data        = dev_iommu_priv_get(dev);
 	mtk_mapping = data->mapping;
+
+	dev_err(dev, "%s. %d. mtkmapping %px.\n", __func__, __LINE__, mtk_mapping);
 
 	err = arm_iommu_attach_device(dev, mtk_mapping);
 	if (err)
@@ -482,7 +499,10 @@ static void mtk_iommu_release_device(struct device *dev)
 	if (!fwspec || fwspec->ops != &mtk_iommu_ops)
 		return;
 
+	dev_err(dev, "%s. %d. \n", __func__, __LINE__);
+	dump_stack();
 	data = dev_iommu_priv_get(dev);
+
 	larbid = mt2701_m4u_to_larb(fwspec->ids[0]);
 	larbdev = data->larb_imu[larbid].dev;
 	device_link_remove(dev, larbdev);
