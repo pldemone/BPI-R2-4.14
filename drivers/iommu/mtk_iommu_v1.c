@@ -370,59 +370,47 @@ static int mtk_iommu_create_mapping(struct device *dev,
 	struct platform_device *m4updev;
 	struct dma_iommu_mapping *mtk_mapping;
 	int ret;
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	if (args->args_count != 1) {
-printk(KERN_ALERT "DEBUG: Passed %s %d count:%d\n",__FUNCTION__,__LINE__,args->args_count);
 		dev_err(dev, "invalid #iommu-cells(%d) property for IOMMU\n",
 			args->args_count);
 		return -EINVAL;
 	}
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	if (!fwspec) {
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		ret = iommu_fwspec_init(dev, &args->np->fwnode, &mtk_iommu_ops);
-printk(KERN_ALERT "DEBUG: Passed %s %d ret:%d\n",__FUNCTION__,__LINE__,ret);
 		if (ret)
 			return ret;
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		fwspec = dev_iommu_fwspec_get(dev);
-printk(KERN_ALERT "DEBUG: Passed %s %d 0x%08x\n",__FUNCTION__,__LINE__,(unsigned int)fwspec);
 	} else if (dev_iommu_fwspec_get(dev)->ops != &mtk_iommu_ops) {
-printk(KERN_ALERT "DEBUG: Passed %s %d 0x%08x != 0x%08x\n",__FUNCTION__,__LINE__,(unsigned int)dev_iommu_fwspec_get(dev)->ops,(unsigned int)&mtk_iommu_ops);
 		return -EINVAL;
 	}
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	if (!dev_iommu_priv_get(dev)) {
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		/* Get the m4u device */
 		m4updev = of_find_device_by_node(args->np);
-printk(KERN_ALERT "DEBUG: Passed %s %d 0x%08x\n",__FUNCTION__,__LINE__,(unsigned int)m4updev);
 		if (WARN_ON(!m4updev))
 			return -EINVAL;
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 		dev_iommu_priv_set(dev, platform_get_drvdata(m4updev));
 	}
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	ret = iommu_fwspec_add_ids(dev, args->args, 1);
-printk(KERN_ALERT "DEBUG: Passed %s %d ret:%d\n",__FUNCTION__,__LINE__,ret);
 	if (ret)
 		return ret;
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	data = dev_iommu_priv_get(dev);
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	mtk_mapping = data->mapping;
 	if (!mtk_mapping) {
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		/* MTK iommu support 4GB iova address space. */
 		mtk_mapping = arm_iommu_create_mapping(&platform_bus_type,
 						0, 1ULL << 32);
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		if (IS_ERR(mtk_mapping))
 			return PTR_ERR(mtk_mapping);
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 		data->mapping = mtk_mapping;
 	}
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	return 0;
 }
 
