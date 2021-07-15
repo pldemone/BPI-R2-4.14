@@ -433,14 +433,12 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 					   idx, &iommu_spec)) {
 
 		err = mtk_iommu_create_mapping(dev, &iommu_spec);
-printk(KERN_ALERT "DEBUG: Passed %s %d err:%d\n",__FUNCTION__,__LINE__,err);
 		of_node_put(iommu_spec.np);
 		if (err)
 			return ERR_PTR(err);
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 		/* dev->iommu_fwspec might have changed */
 		fwspec = dev_iommu_fwspec_get(dev);
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		idx++;
 	}
 
@@ -454,10 +452,9 @@ printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 	larbdev = data->larb_imu[larbid].dev;
 	link = device_link_add(dev, larbdev,
 			       DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-printk(KERN_ALERT "DEBUG: Passed %s %d id:0x%08x,dev:0x%08x,link:0x%08x\n",__FUNCTION__,__LINE__,larbid,(unsigned int)larbdev,(unsigned int)link);
 	if (!link)
 		dev_err(dev, "Unable to link %s\n", dev_name(larbdev));
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	return &data->iommu;
 }
 
@@ -626,28 +623,26 @@ static int mtk_iommu_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, data);
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	ret = mtk_iommu_hw_init(data);
 	if (ret)
 		return ret;
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	ret = iommu_device_sysfs_add(&data->iommu, &pdev->dev, NULL,
 				     dev_name(&pdev->dev));
 	if (ret)
 		return ret;
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	ret = iommu_device_register(&data->iommu, &mtk_iommu_ops, dev);
 	if (ret)
 		goto out_sysfs_remove;
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	if (!iommu_present(&platform_bus_type)) {
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
 		ret = bus_set_iommu(&platform_bus_type,  &mtk_iommu_ops);
-printk(KERN_ALERT "DEBUG: Passed %s %d ret:%d\n",__FUNCTION__,__LINE__,ret);
 		if (ret)
 			goto out_dev_unreg;
 	}
-printk(KERN_ALERT "DEBUG: Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	ret = component_master_add_with_match(dev, &mtk_iommu_com_ops, match);
 	if (ret)
 		goto out_bus_set_null;
