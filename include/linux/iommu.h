@@ -573,6 +573,8 @@ static inline void dev_iommu_fwspec_set(struct device *dev,
 					struct iommu_fwspec *fwspec)
 {
 	dev->iommu->fwspec = fwspec;
+	dev_err(dev,"%s:%d 0x%08x",__FUNCTION__,__LINE__,(unsigned int)fwspec);
+	dump_stack();
 }
 
 static inline void *dev_iommu_priv_get(struct device *dev)
