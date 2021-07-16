@@ -154,9 +154,11 @@ int iommu_device_register(struct iommu_device *iommu,
 			  const struct iommu_ops *ops, struct device *hwdev)
 {
 	/* We need to be able to take module references appropriately */
+	dev_err(hwdev,"%s:%d",__FUNCTION__,__LINE__);
 	if (WARN_ON(is_module_address((unsigned long)ops) && !ops->owner))
 		return -EINVAL;
 
+	dump_stack();
 	iommu->ops = ops;
 	if (hwdev)
 		iommu->fwnode = hwdev->fwnode;

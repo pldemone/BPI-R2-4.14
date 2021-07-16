@@ -27,10 +27,16 @@ static int of_iommu_xlate(struct device *dev,
 	int ret;
 
 	ops = iommu_ops_from_fwnode(fwnode);
+	dev_err(dev,"%s:%d ops:%08x",__FUNCTION__,__LINE__,(unsigned int)ops);
+	if (ops)
+		dev_err(dev,"%s:%d xlate:%08x",__FUNCTION__,__LINE__,(unsigned int)ops->of_xlate);
+
 	if ((ops && !ops->of_xlate) ||
 	    !of_device_is_available(iommu_spec->np))
+	{
+		dev_err(dev,"no iommu");
 		return NO_IOMMU;
-
+	}
 	ret = iommu_fwspec_init(dev, &iommu_spec->np->fwnode, ops);
 	if (ret)
 		return ret;
