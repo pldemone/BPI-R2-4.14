@@ -952,6 +952,7 @@
 		interrupt-names = "mc";
 		phys = <&u2port2 PHY_TYPE_USB2>;
 		dr_mode = "otg";
+		usb-role-switch;
 		clocks = <&pericfg CLK_PERI_USB0>,
 			 <&pericfg CLK_PERI_USB0_MCU>,
 			 <&pericfg CLK_PERI_USB_SLV>;
