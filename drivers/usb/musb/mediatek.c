@@ -121,11 +121,13 @@ static int mtk_otg_switch_set(struct mtk_glue *glue, enum usb_role role)
 	u8 devctl = readb(musb->mregs + MUSB_DEVCTL);
 	enum usb_role new_role;
 
+dev_err(glue->dev, "%s:%d role:%d glue-role: %d\n",__FUNCTION__,__LINE__,role, glue->role);
 	if (role == glue->role)
 		return 0;
 
 	switch (role) {
 	case USB_ROLE_HOST:
+		dev_err(glue->dev, "switch to HOST\n");
 		musb->xceiv->otg->state = OTG_STATE_A_WAIT_VRISE;
 		glue->phy_mode = PHY_MODE_USB_HOST;
 		new_role = USB_ROLE_HOST;
@@ -137,6 +139,7 @@ static int mtk_otg_switch_set(struct mtk_glue *glue, enum usb_role role)
 		MUSB_HST_MODE(musb);
 		break;
 	case USB_ROLE_DEVICE:
+		dev_err(glue->dev, "switch to peripheral\n");
 		musb->xceiv->otg->state = OTG_STATE_B_IDLE;
 		glue->phy_mode = PHY_MODE_USB_DEVICE;
 		new_role = USB_ROLE_DEVICE;
@@ -148,6 +151,7 @@ static int mtk_otg_switch_set(struct mtk_glue *glue, enum usb_role role)
 		MUSB_DEV_MODE(musb);
 		break;
 	case USB_ROLE_NONE:
+		dev_err(glue->dev, "switch to NONE\n");
 		glue->phy_mode = PHY_MODE_USB_OTG;
 		new_role = USB_ROLE_NONE;
 		devctl &= ~MUSB_DEVCTL_SESSION;
@@ -163,7 +167,7 @@ static int mtk_otg_switch_set(struct mtk_glue *glue, enum usb_role role)
 
 	glue->role = new_role;
 	phy_set_mode(glue->phy, glue->phy_mode);
-
+dev_err(glue->dev, "%s:%d\n",__FUNCTION__,__LINE__);
 	return 0;
 }
 
@@ -273,17 +277,20 @@ static int mtk_musb_set_mode(struct musb *musb, u8 mode)
 	struct mtk_glue *glue = dev_get_drvdata(dev->parent);
 	enum phy_mode new_mode;
 	enum usb_role new_role;
-
+dev_err(glue->dev, "%s:%d\n",__FUNCTION__,__LINE__);
 	switch (mode) {
 	case MUSB_HOST:
+dev_err(glue->dev, "%s:%d MODE:Host\n",__FUNCTION__,__LINE__);
 		new_mode = PHY_MODE_USB_HOST;
 		new_role = USB_ROLE_HOST;
 		break;
 	case MUSB_PERIPHERAL:
+dev_err(glue->dev, "%s:%d MODE:PERIPHERAL\n",__FUNCTION__,__LINE__);
 		new_mode = PHY_MODE_USB_DEVICE;
 		new_role = USB_ROLE_DEVICE;
 		break;
 	case MUSB_OTG:
+dev_err(glue->dev, "%s:%d MODE: OTG\n",__FUNCTION__,__LINE__);
 		new_mode = PHY_MODE_USB_OTG;
 		new_role = USB_ROLE_NONE;
 		break;
@@ -299,7 +306,7 @@ static int mtk_musb_set_mode(struct musb *musb, u8 mode)
 		dev_err(glue->dev, "Does not support changing modes\n");
 		return -EINVAL;
 	}
-
+dev_err(glue->dev, "%s:%d\n",__FUNCTION__,__LINE__);
 	mtk_otg_switch_set(glue, new_role);
 	return 0;
 }
@@ -319,21 +326,23 @@ static int mtk_musb_init(struct musb *musb)
 	/* Set TX/RX toggle enable */
 	musb_writew(musb->mregs, MUSB_TXTOGEN, MTK_TOGGLE_EN);
 	musb_writew(musb->mregs, MUSB_RXTOGEN, MTK_TOGGLE_EN);
-
+dev_err(glue->dev, "%s:%d\n",__FUNCTION__,__LINE__);
 	if (musb->port_mode == MUSB_OTG) {
 		ret = mtk_otg_switch_init(glue);
+dev_err(glue->dev, "%s:%d ret:%d\n",__FUNCTION__,__LINE__,ret);
 		if (ret)
 			return ret;
 	}
-
+dev_err(glue->dev, "%s:%d\n",__FUNCTION__,__LINE__);
 	ret = phy_init(glue->phy);
+
 	if (ret)
 		goto err_phy_init;
 
 	ret = phy_power_on(glue->phy);
 	if (ret)
 		goto err_phy_power_on;
-
+dev_err(glue->dev, "%s:%d\n",__FUNCTION__,__LINE__);
 	phy_set_mode(glue->phy, glue->phy_mode);
 
 #if defined(CONFIG_USB_INVENTRA_DMA)
@@ -342,11 +351,13 @@ static int mtk_musb_init(struct musb *musb)
 #endif
 	musb_writel(musb->mregs, USB_L1INTM, TX_INT_STATUS | RX_INT_STATUS |
 		    USBCOM_INT_STATUS | DMA_INT_STATUS);
+dev_err(glue->dev, "%s:%d (end of function)\n",__FUNCTION__,__LINE__);
 	return 0;
 
 err_phy_power_on:
 	phy_exit(glue->phy);
 err_phy_init:
+dev_err(glue->dev, "%s:%d err_phy_init\n",__FUNCTION__,__LINE__);
 	mtk_otg_switch_exit(glue);
 	return ret;
 }

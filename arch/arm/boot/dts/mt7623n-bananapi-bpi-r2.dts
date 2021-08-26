@@ -473,7 +473,7 @@
 &usb3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&musb_pins>;
-	dr_mode = "host";
+	//dr_mode = "host";
 	status = "okay";
 /*
 	usb_vbus: regulator@0 {
