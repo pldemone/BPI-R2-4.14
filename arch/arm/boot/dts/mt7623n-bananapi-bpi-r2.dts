@@ -480,8 +480,8 @@
 };
 
 &usb0 {
-	//pinctrl-names = "default";
-	//pinctrl-0 = <&musb_pins>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&musb_pins>;
 	//dr_mode = "host";
 	status = "okay";
 	usb-role-switch;
@@ -508,6 +508,6 @@
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
 		type = "micro";
 		id-gpios = <&pio 44 GPIO_ACTIVE_HIGH>;
-		vbus-supply = <&reg_usb0_vbus>;
+		//vbus-supply = <&reg_usb0_vbus>;
 	};
 };
