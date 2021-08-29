@@ -374,7 +374,14 @@
 				bias-disable;
 		};
 	};
+
+	musb_pins: musb {
+		pins-musb {
+			pinmux = <MT7623_PIN_237_EXT_SDIO2_FUNC_DRV_VBUS>;
+		};
+	};
 };
+
 &consys {
 	mediatek,pwrap-regmap = <&pwrap>;
 	pinctrl-names = "default";
@@ -462,3 +469,21 @@
 &u3phy2 {
 	status = "okay";
 };
+
+&usb0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&musb_pins>;
+	status = "okay";
+	usb-role-switch;
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		id-gpios = <&pio 44 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&u2phy1 {
+	status = "okay";
+};
+
